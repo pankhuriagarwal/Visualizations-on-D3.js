@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<head>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            width: 960px;
+            height: 500px;
+            position: relative;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            position: center;
+        }
+
+
+
+        .toolTip {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            position: absolute;
+            display: none;
+            width: auto;
+            height: auto;
+            background: none repeat scroll 0 0 white;
+            border: 0 none;
+            border-radius: 8px 8px 8px 8px;
+            box-shadow: -3px 3px 15px #888888;
+            color: black;
+            font: 12px sans-serif;
+            padding: 5px;
+            text-align: center;
+        }
+
+
+        text {
+            font: 10px sans-serif;
+            color: #000;
+        }
+
+        text.value {
+            font-size: 120%;
+            fill: white;
+        }
+
+        .axisHorizontal path {
+            fill: none;
+        }
+
+        .axisHorizontal .tick line {
+            stroke-width: 1;
+            stroke: rgba(0, 0, 0, 0.2);
+        }
+
+        .bar {
+            fill: grey;
+            fill-opacity: .9;
+        }
+
+        .bar:hover {
+            fill: steelblue;
+        }
+
+        .line {
+            fill: none;
+            stroke: steelblue;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="smallChart"></div>
+    <script src="../lib/d3.v5.min.js"></script>
+    <script src="../lib/d3-scale-chromatic.v1.min.js"></script>
+    <script src="../lib/topojson.v2.min.js"></script>
+    <script src="../lib/d3-tip.min.js"></script>
+    <script>
+        data = [{ country: 'Bangladesh', population_2012: 105905297, growth: { year_2013: 42488, year_2014: 934, year_2015: 52633, year_2016: 112822, year_2017: 160792 } },
+        { country: 'Ethopia', population_2012: 75656319, growth: { year_2013: 1606010, year_2014: 1606705, year_2015: 1600666, year_2016: 1590077, year_2017: 1580805 } },
+        { country: 'Kenya', population_2012: 33007327, growth: { year_2013: 705153, year_2014: 703994, year_2015: 699906, year_2016: 694295, year_2017: 687910 } },
+        { country: 'Afghanistan', population_2012: 23280573, growth: { year_2013: 717151, year_2014: 706082, year_2015: 665025, year_2016: 616262, year_2017: 573643 } },
+        { country: 'Morocco', population_2012: 13619520, growth: { year_2013: 11862, year_2014: 7997, year_2015: 391, year_2016: -8820, year_2017: -17029 } }
+        ];
+    </script>
+    <script>
+
+        data.forEach(function (d) {
+            d.country = d.country
+            d.popcum = d.population_2012 + d.growth.year_2013 + d.growth.year_2014 +
+                d.growth.year_2015 + d.growth.year_2016 + d.growth.year_2017
+            d.growth13 = (d.growth.year_2013 / d.population_2012) * 100
+            d.growth14 = (d.growth.year_2014 / (d.population_2012 + d.growth.year_2013) * 100)
+            d.growth15 = (d.growth.year_2015 / (d.population_2012 + d.growth.year_2013 +
+                d.growth.year_2014) * 100)
+            d.growth16 = (d.growth.year_2016 / (d.population_2012 + d.growth.year_2013 +
+                d.growth.year_2014 + d.growth.year_2015) * 100)
+            d.growth17 = (d.growth.year_2017 / (d.population_2012 + d.growth.year_2013 +
+                d.growth.year_2014 + d.growth.year_2015 + d.growth.year_2016) * 100)
+        });
+
+        var div = d3.select("body").append("div").attr("class", "toolTip");
+
+        var axisMargin = 20,
+            margin = 40,
+            valueMargin = 4,
+            width = parseInt(d3.select('body').style('width'), 10),
+            height = parseInt(d3.select('body').style('height'), 10),
+            barHeight = (height - axisMargin - margin * 2) * 0.4 / data.length,
+            barPadding = (height - axisMargin - margin * 2) * 0.6 / data.length,
+            data, bar, svg, scale, xAxis, labelWidth = 0;
+
+        max = d3.max(data, function (d) { return d.popcum; });
+        // console.log(data)
+
+        svg = d3.select('body')
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+
+        bar = svg.selectAll("g")
+            .data(data)
+            .enter()
+            .append("g");
+
+        bar.attr("class", "bar")
+            .attr("cx", 0)
+            .attr("transform", function (d, i) {
+                return "translate(" + margin + "," + (i * (barHeight + barPadding) + barPadding) + ")";
+            });
+
+        bar.append("text")
+            .attr("class", "label")
+            .attr("y", barHeight / 2)
+            .attr("dy", ".35em") 
+            .text(function (d) {
+                return d.country;
+            }).each(function () {
+                labelWidth = Math.ceil(Math.max(labelWidth, this.getBBox().width));
+                x = Math.floor(Math.min(labelWidth, this.getBBox().x));
+            });
+
+        scale = d3.scaleLinear()
+            .domain([0, max])
+            .range([0, width - margin * 2 - labelWidth]);
+
+        svg.append("g")
+            .attr("class", "x axis")
+
+        bar.append("rect")
+            .attr("transform", "translate(" + labelWidth + ", 0)")
+            .attr("height", barHeight)
+            .attr("width", function (d) {
+                return scale(d.popcum);
+            });
+
+        bar.append("text")
+            .attr("class", "value")
+            .attr("y", barHeight / 2)
+            .attr("x", 60) 
+            .attr("dy", ".35em") 
+            .attr("text-anchor", "start")
+            .style("font-size", "15px")
+            .text(function (d) {
+                return (d.popcum.toLocaleString('en'));
+            });
+        // .attr("x", function(d) {
+        //     var width = this.getBBox().width;
+        //     return Math.max(width + valueMargin, scale(d.popcum));
+        // });
+
+        bar
+            .on("mouseover", function (d, i) {
+                createchart(i);
+            });
+        bar
+            .on("mouseout", function () {
+                d3.selectAll("#smallchart > *").remove()
+
+            });
+
+
+        function createchart(index) {
+            d1 = data[index];
+            // console.log(d1.growth13)
+            d3.select("#smallchart").remove();
+            thisinfo = [{
+                "x": "2013",
+                "y": d1.growth13
+            },
+            {
+                "x": "2014",
+                "y": d1.growth14
+            },
+            {
+                "x": "2015",
+                "y": d1.growth15
+            },
+            {
+                "x": "2016",
+                "y": d1.growth16
+            },
+            {
+                "x": "2017",
+                "y": d1.growth17
+            }
+            ]
+
+            console.log(index)
+
+
+            var margin2 = {
+                top: 30,
+                right: 40,
+                bottom: 50,
+                left: 40
+            };
+
+            var width2 = 300 - margin2.left - margin2.right,
+                height2 = 300 - margin2.top - margin2.bottom;
+
+            svg2 = d3.select("body").append("svg")
+                .attr("id", "smallchart")
+                .attr("width", width2 + margin2.left + margin2.right)
+                .attr("height", height2 + margin2.top + margin2.bottom)
+                // below line translates to upper corner
+                .attr("transform", "translate(" + 890 + "," + -(5 - index) * 100 + ")")
+                .append("g")
+
+
+
+            var y2 = d3.scaleLinear()
+                .range([height2, 0])
+                .domain(d3.extent(thisinfo, function (d) { return d.y; }));
+
+            // Added this but didn't use it
+            svg2.append("g")
+                .attr("class", "y axis")
+                .attr("transform", "translate(40, 47)")
+                .call(d3.axisLeft(y2));
+
+
+            // scalePoint is the new rangepoints
+            var x2 = d3.scalePoint()
+                .domain(["2013", "2014", "2015", "2016", "2017"])
+                .range([0, width2]);
+
+            svg2.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(40, 267)")
+
+                .call(d3.axisBottom(x2));
+            console.log(index)
+
+            console.log(thisinfo)
+
+            var line = d3.line()
+                .x(function (d) { return x2(d.x) + 40 })
+                .y(function (d) { return y2(d.y) + 47 })
+
+
+            svg2.append("path")
+                .datum(thisinfo)
+                .attr("class", "line") 
+                .attr("d", line);
+
+
+            console.log(index)
+
+
+            // Add % on y axis
+            svg2.append("text")
+                .attr("x", 0)
+                .attr("y", 40)
+                .attr("width", 150)
+                .attr("alignment-baseline", "default")
+                .attr("height", 50)
+                .text("Pct %")
+
+            svg2.append("text")
+                .attr("x", 220)
+                .attr("y", 300)
+                .attr("width", 150)
+                .attr("alignment-baseline", "default")
+                .attr("height", 50)
+                .text("Year")
+
+            console.log("last" + index)
+        }
+
+    </script>
+</body>

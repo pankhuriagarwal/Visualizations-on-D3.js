@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    body {
+        font: 10px sans-serif;
+    }
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+
+    .pagebreak {
+        page-break-before: always;
+    }
+
+    /* page-break-after works, as well */
+    .title {
+        font-size: 2em
+    }
+
+    .point {
+        fill: steelblue;
+        stroke: #000;
+    }
+</style>
+
+<body>
+    <script src="../lib/d3.v5.min.js"></script>
+    <script>
+        // Adapted https://bl.ocks.org/mbostock/3244058 to D3.js version 5
+
+        var margin = { top: 40, right: 20, bottom: 20, left: 80 },
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+
+        var x = d3.scaleLinear()
+            .range([0, width]);
+
+        var y = d3.scaleLinear()
+            .range([height, 0]);
+
+        var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        d3.csv("movies.csv").then(function (data) {
+            // Coerce the strings to numbers.
+            data.forEach(function (d) {
+                d.Year = +d.Year;
+                d.Runtime = +d.Runtime;
+                d.Rating = +d.Rating;
+                d.Votes = +d.Votes;
+                d.Budget = +d.Budget;
+                d.Gross = +d.Gross;
+                d.WinsNoms = +d.WinsNoms;
+                d.IsGoodRating = +d.IsGoodRating;
+
+
+            });
+            // Compute the scales’ domains.
+            x.domain(d3.extent(data, function (d) { return d.Rating; })).nice();
+            y.domain(d3.extent(data, function (d) { return d.WinsNoms; })).nice();
+
+            //Add the x-axis.
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+            // Add the y-axis.
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(d3.axisLeft(y));
+            svg.append("text")
+                .attr("class", "x label")
+                .attr("text-anchor", "end")
+                .attr("x", width)
+                .attr("y", height - 6)
+                .text("Rating");
+
+
+
+            svg.append("text")
+                .attr("class", "y label")
+                .attr("text-anchor", "end")
+                .attr("y", 6)
+                .attr("dy", ".75em")
+                .attr("transform", "rotate(-90)")
+                .text("Wins+Noms");
+
+            //Create Symbol
+
+            var symbol = d3.symbol();
+
+
+            // Add the points!
+            svg.selectAll(".point")
+                .data(data)
+                .enter().append("path")
+                .attr("class", "point")
+                .attr("d", symbol.type(function (d) {
+
+                    if (d.IsGoodRating == 1) { return d3.symbolCross; } else { return d3.symbolCircle; }
+                }))
+                .style('fill', function (d) { if (d.IsGoodRating == 1) { return 'blue'; } else { return 'red'; } })
+                .attr("transform", function (d) { return "translate(" + x(d.Rating) + "," + y(d.WinsNoms) + ")"; });
+
+
+
+            function createlegend(x1, y1, y2, titg, svgtype) {
+
+                svgtype.append("svg:text")
+                    .text(titg)
+                    .attr("x", 427)
+                    .attr("y", 35)
+                    .attr("class", "title")
+                    .attr("dy", "-1em")
+                    .style("text-anchor", "middle");
+
+
+
+                svgtype.append("svg:text")
+                    .text("bad rating")
+                    .attr("x", 827)
+                    .attr("y", 15)
+                    .attr("dy", "-1em")
+                    .style("text-anchor", "middle");
+
+                svgtype.append("svg:text")
+                    .text("good rating")
+                    .attr("x", 827)
+                    .attr("y", 35)
+                    .attr("dy", "-1em")
+                    .style("text-anchor", "middle");
+
+                svgtype.append('path')
+                    .attr('width', 9)
+                    .attr('height', 9)
+                    .attr("class", "point33")
+                    .attr("x", 787)
+                    .attr("y", -2)
+                    .attr("d", d3.symbol().type(d3.symbolCross))
+                    .style("fill", "blue")
+                    .attr("transform", function (d) { return "translate(" + x1 + "," + y1 + ")"; });
+
+                svgtype.append('path')
+                    .attr('width', 9)
+                    .attr('height', 9)
+                    .attr("x", 787)
+                    .attr("y", 17)
+                    .attr("d", d3.symbol().type(d3.symbolCircle))
+                    .style("fill", "red")
+                    .attr("transform", function (d) { return "translate(" + x1 + "," + y2 + ")"; });
+
+            }
+
+
+            createlegend(787, 2, 20, "Wins+Nominations vs. Rating", svg);
+
+
+            var margin2 = { top: 40, right: 20, bottom: 20, left: 80 },
+                width2 = 960 - margin2.left - margin2.right,
+                height2 = 500 - margin2.top - margin2.bottom;
+
+            var x2 = d3.scaleLinear()
+                .range([0, width2]);
+
+            var y2 = d3.scaleLinear()
+                .range([height2, 0]);
+
+            var svg2 = d3.select("body").append("svg")
+                .attr("width", width2 + margin2.left + margin2.right)
+                .attr("height", height2 + margin2.top + margin2.bottom)
+                .attr("class", "pagebreak")
+                .append("g")
+                .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+
+
+            // Compute the scales’ domains.
+            x2.domain(d3.extent(data, function (d) { return d.Rating; })).nice();
+            y2.domain(d3.extent(data, function (d) { return d.Budget; })).nice();
+
+
+            // Add the x-axis.
+            svg2.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height2 + ")")
+                .call(d3.axisBottom(x2));
+
+            // Add the y-axis.
+            svg2.append("g")
+                .attr("class", "y axis")
+                .call(d3.axisLeft(y2));
+
+            svg2.append("text")
+                .attr("class", "x label")
+                .attr("text-anchor", "end")
+                .attr("x", width)
+                .attr("y", height - 6)
+                .text("Rating");
+
+
+
+            svg2.append("text")
+                .attr("class", "y label")
+                .attr("text-anchor", "end")
+                .attr("y", 6)
+                .attr("dy", ".75em")
+                .attr("transform", "rotate(-90)")
+                .text("Budget");
+
+
+            //Create Symbol
+
+            var symbol2 = d3.symbol();
+
+            // Add the points!
+            svg2.selectAll(".point")
+                .data(data)
+                .enter()
+                .append("path")
+                .attr("class", "point")
+                .attr("d", symbol2.type(function (d) {
+
+                    if (d.IsGoodRating == 1) { return d3.symbolCross; } else { return d3.symbolCircle; }
+                }))
+                .style('fill', function (d) { if (d.IsGoodRating == 1) { return 'blue'; } else { return 'red'; } })
+                .attr("transform", function (d) { return "translate(" + x2(d.Rating) + "," + y2(d.Budget) + ")"; });
+
+
+            createlegend(787, 2, 20, "Budget vs. Rating", svg2);
+
+
+
+            var margin3 = { top: 40, right: 20, bottom: 20, left: 80 },
+                width3 = 960 - margin3.left - margin3.right,
+                height3 = 500 - margin3.top - margin3.bottom;
+
+            var x3 = d3.scaleLinear()
+                .range([0, width3]);
+
+            var y3 = d3.scaleLinear()
+                .range([height3, 0]);
+
+            var svg3 = d3.select("body").append("svg")
+                .attr("width", width3 + margin3.left + margin3.right)
+                .attr("height", height3 + margin3.top + margin3.bottom)
+                .attr("class", "pagebreak")
+                .append("g")
+                .attr("transform", "translate(" + margin3.left + "," + margin3.top + ")");
+
+            var sizeExtent = d3.extent(data, function (d) {
+                return d.WinsNoms
+            });
+
+            var sizeScale = d3.scaleLinear()
+                .domain(sizeExtent)
+                .range([5, 250]);
+
+            var symbolTypesx = {
+                "cross": d3.symbol().type(d3.symbolCross).size(function (d) {
+                    return sizeScale(d.WinsNoms);
+                }),
+                "circle": d3.symbol().type(d3.symbolCircle).size(function (d) {
+                    return sizeScale(d.WinsNoms);
+                })
+            };
+
+
+
+            // Compute the scales’ domains.
+            x3.domain(d3.extent(data, function (d) { return d.Rating; })).nice();
+            y3.domain(d3.extent(data, function (d) { return d.Votes; })).nice();
+
+
+            // Add the x-axis.
+            svg3.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height3 + ")")
+                .call(d3.axisBottom(x3));
+
+            // Add the y-axis.
+            svg3.append("g")
+                .attr("class", "y axis")
+                .call(d3.axisLeft(y3));
+
+            svg3.append("text")
+                .attr("class", "x label")
+                .attr("text-anchor", "end")
+                .attr("x", width)
+                .attr("y", height - 6)
+                .text("Rating");
+
+
+
+            svg3.append("text")
+                .attr("class", "y label")
+                .attr("text-anchor", "end")
+                .attr("y", 6)
+                .attr("dy", ".75em")
+                .attr("transform", "rotate(-90)")
+                .text("Votes");
+
+            //Create Symbol
+
+            // var symbol3 = d3.symbol();
+
+            // Add the points!
+            svg3.selectAll(".point")
+                .data(data)
+                .enter().append("path")
+                .attr("class", "point")
+                .attr("d", function (d) {
+
+                    if (d.IsGoodRating == 1) { return symbolTypesx.cross(d); } else { return symbolTypesx.circle(d); }
+                })
+                .style('fill', function (d) { if (d.IsGoodRating == 1) { return 'blue'; } else { return 'red'; } })
+                .attr("transform", function (d) { return "translate(" + x3(d.Rating) + "," + y3(d.Votes) + ")"; });
+
+            createlegend(787, 2, 20, "Votes vs. Rating", svg3);
+
+
+            // Grpah 4
+            var margin4 = { top: 40, right: 20, bottom: 20, left: 80 },
+                width4 = 960 - margin4.left - margin4.right,
+                height4 = 500 - margin4.top - margin4.bottom;
+
+            var x4 = d3.scaleLinear()
+                .range([0, width4]);
+
+            var y4 = d3.scaleSqrt()
+                .range([height4, 0]);
+
+            var svg4 = d3.select("body").append("svg")
+                .attr("width", width4 + margin4.left + margin4.right)
+                .attr("height", height4 + margin4.top + margin4.bottom)
+                .attr("class", "pagebreak")
+                .append("g")
+                .attr("transform", "translate(" + margin4.left + "," + margin4.top + ")");
+
+
+            // Compute the scales’ domains.
+            x4.domain(d3.extent(data, function (d) { return d.Rating; })).nice();
+            y4.domain(d3.extent(data, function (d) { return d.WinsNoms; })).nice();
+
+            // Add the x-axis.
+            svg4.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height4 + ")")
+                .call(d3.axisBottom(x4));
+
+            svg4.append("text")
+                .attr("class", "x label")
+                .attr("text-anchor", "end")
+                .attr("x", width4)
+                .attr("y", height4 - 6)
+                .text("Rating");
+
+            // Add the y-axis.
+            svg4.append("g")
+                .attr("class", "y axis")
+                .call(d3.axisLeft(y4));
+
+            svg4.append("text")
+                .attr("class", "y label")
+                .attr("text-anchor", "end")
+                .attr("y", 6)
+                .attr("dy", ".75em")
+                .attr("transform", "rotate(-90)")
+                .text("Wins+Noms");
+
+            //Create Symbol
+
+            var symbol4 = d3.symbol();
+
+
+            // Add the points!
+            svg4.selectAll(".point")
+                .data(data)
+                .enter().append("path")
+                .attr("class", "point")
+                .attr("d", symbol4.type(function (d) {
+
+                    if (d.IsGoodRating == 1) { return d3.symbolCross; } else { return d3.symbolCircle; }
+                }))
+                .style('fill', function (d) { if (d.IsGoodRating == 1) { return 'blue'; } else { return 'red'; } })
+                .attr("transform", function (d) { return "translate(" + x4(d.Rating) + "," + y4(d.WinsNoms) + ")"; });
+
+            
+createlegend(787, 2, 20, "Wins+Nominations (square-root-scaled) vs. Rating", svg4);
+            //Log scale on Y
+
+            var margin5 = { top: 40, right: 20, bottom: 20, left: 80 },
+                width5 = 960 - margin5.left - margin5.right,
+                height5 = 500 - margin5.top - margin5.bottom;
+
+            var x5 = d3.scaleLinear()
+                .range([0, width5]);
+
+            var y5 = d3.scaleLog()
+                .range([height5, 0.1]);
+
+
+            var svg5 = d3.select("body").append("svg")
+                .attr("width", width5 + margin5.left + margin5.right)
+                .attr("height", height5 + margin5.top + margin5.bottom)
+                .attr("class", "pagebreak")
+                .append("g")
+                .attr("transform", "translate(" + margin5.left + "," + margin5.top + ")");
+
+
+            // Compute the scales’ domains.
+            x5.domain(d3.extent(data, function (d) { return d.Rating; })).nice();
+            y5.domain(d3.extent(data, function (d) { return d.WinsNoms + 0.1; })).nice();
+            y5.clamp(true);
+
+            // Add the x-axis.
+            svg5.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height5 + ")")
+                .call(d3.axisBottom(x5));
+
+            svg5.append("text")
+                .attr("class", "x label")
+                .attr("text-anchor", "end")
+                .attr("x", width5)
+                .attr("y", height5 - 6)
+                .text("Rating");
+
+            // Add the y-axis.
+            svg5.append("g")
+                .attr("class", "y axis")
+                .call(d3.axisLeft(y5));
+
+            svg5.append("text")
+                .attr("class", "y label")
+                .attr("text-anchor", "end")
+                .attr("y", 6)
+                .attr("dy", ".75em")
+                .attr("transform", "rotate(-90)")
+                .text("Wins+Noms");
+
+            //Create Symbol
+
+            var symbol5 = d3.symbol();
+
+            createlegend(787, 2, 20, "Wins+Nominations (log-scaled) vs. Rating", svg5);
+
+            // Add the points!
+            svg5.selectAll(".point")
+                .data(data)
+                .enter().append("path")
+                .attr("class", "point")
+                .attr("d", symbol5.type(function (d) {
+
+                    if (d.IsGoodRating == 1) { return d3.symbolCross; } else { return d3.symbolCircle; }
+                }))
+                .style('fill', function (d) { if (d.IsGoodRating == 1) { return 'blue'; } else { return 'red'; } })
+                .attr("transform", function (d) { return "translate(" + x5(d.Rating) + "," + y5(d.WinsNoms) + ")"; });
+
+        });
+
+
+    </script>
+</body>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: black;
+        shape-rendering: crispEdges;
+    }
+
+    .axis text {
+        font-family: sans-serif;
+        font-size: 11px;
+    }
+
+    .legend {
+        /* NEW */
+        font-size: 12px;
+        /* NEW */
+    }
+
+    /* NEW */
+    rect {
+        /* NEW */
+        stroke-width: 2;
+        /* NEW */
+    }
+
+    /* NEW */
+</style>
+
+<body>
+    <div height: 500px; width: 50%;></div>
+    <p style="padding-left: 200px"><b>Visualizing Crimes in New York City</b></p>
+    <div class="dropDown" style="margin-left:280px; margin-top:50px">Year</div>
+    <div class="heatmap"></div>
+</body>
+<script src="../lib/d3.v5.min.js"></script>
+<script src="../lib/d3-scale-chromatic.v1.min.js"></script>
+<script src="../lib/topojson.v2.min.js"></script>
+<script src="../lib/d3-tip.min.js"></script>
+<script>
+    var itemSize = 22,
+        cellSize = itemSize - 1,
+        margin = { top: 60, right: 80, bottom: 120, left: 110 };
+
+    var width = 700 - margin.right - margin.left,
+        height = 700 - margin.top - margin.bottom;
+
+    var x = d3.scaleBand().range([0, width]),
+        y = d3.scaleBand().range([height, 0]);
+
+    var axislabel = [0, 8, 16, 24, 32, 40, 48, 56, 64, 72];
+
+
+
+    var cities = ['Bronx', 'Brooklyn', 'Manhattan', 'Queens', 'StatenIsland']
+    crimeType = ['Assault', 'Burglary', 'Housing', 'Murder', 'Robbery', 'Shooting']
+
+    var xScale = d3.scaleOrdinal()
+        .domain(crimeType)
+        .range([0, crimeType.length * itemSize]);
+
+    var yScale = d3.scaleOrdinal()
+        .domain(cities)
+        .range([0, cities.length * itemSize]);
+
+
+
+    YearCrimeCity = {}
+    d3.csv("heatmap.csv")
+        .then(function (buckets) {
+
+            // Coerce the CSV data to the appropriate types.
+            buckets.forEach(function (d) {
+                if (d.Year in YearCrimeCity == false) {
+                    YearCrimeCity[d.Year] = {}
+                    YearCrimeCity[d.Year][d["Crime Type"]] = {}
+                    YearCrimeCity[d.Year][d["Crime Type"]]["Bronx"] = +d.Bronx
+                    YearCrimeCity[d.Year][d["Crime Type"]]["Brooklyn"] = +d.Brooklyn
+                    YearCrimeCity[d.Year][d["Crime Type"]]["Manhattan"] = +d.Manhattan
+                    YearCrimeCity[d.Year][d["Crime Type"]]["Queens"] = +d.Queens
+                    YearCrimeCity[d.Year][d["Crime Type"]]["StatenIsland"] = +d["Staten Island"]
+
+
+                } else if (d["Crime Type"] in YearCrimeCity[d.Year] == false) {
+
+                    YearCrimeCity[d.Year][d["Crime Type"]] = {}
+                    YearCrimeCity[d.Year][d["Crime Type"]]["Bronx"] = +d.Bronx
+                    YearCrimeCity[d.Year][d["Crime Type"]]["Brooklyn"] = +d.Brooklyn
+                    YearCrimeCity[d.Year][d["Crime Type"]]["Manhattan"] = +d.Manhattan
+                    YearCrimeCity[d.Year][d["Crime Type"]]["Queens"] = +d.Queens
+                    YearCrimeCity[d.Year][d["Crime Type"]]["StatenIsland"] = +d["Staten Island"]
+                }
+            });
+            console.log(YearCrimeCity)
+            data2 = {}
+            for (var i = 0, keys = Object.keys(YearCrimeCity), ii = keys.length; i < ii; i++) {
+                data2[keys[i]] = []
+                for (var j = 0, keys2 = Object.keys(YearCrimeCity[keys[i]]), jj = keys2.length; j < jj; j++) {
+                    // console.log(keys[i])
+                    // console.log(keys2[j])
+                    for (var k = 0, keys3 = Object.keys(YearCrimeCity[keys[i]][keys2[j]]), kk = keys3.length; k < kk; k++) {
+                        var singleObj = {};
+                        singleObj['City'] = keys3[k];
+                        singleObj['Crime'] = keys2[j];
+                        singleObj['Value'] = YearCrimeCity[keys[i]][keys2[j]][keys3[k]];
+                        data2[keys[i]].push(singleObj);
+
+                        // console.log(YearCrimeCity[keys[i]][keys2[j]][keys3[k]])
+                    }
+
+                }
+            }
+
+            console.log(data2['2011'])
+
+            var colorScale = d3.scaleLinear()
+                .domain([0, 9, 18, 27, 36, 45, 54, 63, 72, 81])
+                .range(['#f7fcf0', '#e0f3db', '#ccebc5', '#a8ddb5', '#7bccc4', '#4eb3d3', '#2b8cbe', '#0868ac', '#084081']);
+            x.domain(crimeType);
+            y.domain(cities);
+
+            var data = ["2011", "2012", "2013", "2014", "2015"];
+
+            var select = d3.select('.dropDown')
+                .append('select')
+                .attr('class', 'select')
+                // .attr("align","center");
+                // .attr('x',100)
+                // .attr('y',100)
+                .on('change', updateCircles)
+
+            var options = select
+                .selectAll('option')
+                .data(data).enter()
+                .append('option')
+
+                .text(function (d) { return d; });
+
+            selectValue = "2011"
+
+            function onchange() {
+                selectValue = d3.select('select').property('value')
+                console.log(selectValue)
+            };
+
+            var svg = d3.select('.heatmap')
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            var cells = svg.selectAll('rect')
+                .data(data2[selectValue])
+                .enter().append('g').append('rect')
+                .attr('class', 'cell')
+                .attr('width', width / crimeType.length)
+                .attr('height', height / cities.length)
+                .attr('y', function (d) { return height - ((cities.indexOf(d.City) + 1) * height / cities.length); })
+                .attr('x', function (d) { return crimeType.indexOf(d.Crime) * width / crimeType.length; })
+                .attr('fill', function (d) { return colorScale(d.Value); });
+
+            function updateCircles() {
+                var selectValue = d3.select('select').property('value')
+                console.log("VALUE IS BEING UPDATED" + selectValue)
+                console.log("axislable" + data2[selectValue])
+                t = d3.max(data2[selectValue], function (d) { return d.Value; });
+                console.log("max is " + t);
+                let f = Math.floor(t / 9);
+                axislabel = [];
+                for (i = 0; i <= t;) {
+                    axislabel.push(i);
+                    i = i + f;
+                }
+                console.log("new axislabel is " + axislabel);
+                drawlegend(axislabel)
+                svg.selectAll('rect')
+                    .data(data2[selectValue])
+                    // .enter().append('g').append('rect')
+                    .attr('class', 'cell')
+                    .attr('width', width / crimeType.length)
+                    .attr('height', height / cities.length)
+                    .transition()
+                    .duration(1000)
+                    .attr('y', function (d) { return height - ((cities.indexOf(d.City) + 1) * height / cities.length); })
+                    .attr('x', function (d) { return crimeType.indexOf(d.Crime) * width / crimeType.length; })
+                    .attr('fill', function (d) { return colorScale(d.Value); });
+            }
+
+
+            var legendRectSize = 22;
+            var legendRectSizewidth = 38;
+            var legendSpacing = 4;
+
+            function drawlegend(axislabel) {
+                console.log("drawlegend called " + axislabel)
+                d3.selectAll('.legend').remove();
+                var legend = svg.selectAll('.legend')
+                    .data(axislabel)
+                    .enter()
+                    .append('g')
+                    .attr('class', 'legend')
+                    .attr('transform', function (d, i) {
+                        //console.log(colorScale.domain());
+                        var height = legendRectSize;
+                        var y = 600;
+                        var x = 200 + i * legendRectSizewidth;
+                        return 'translate(' + x + ',' + y + ')';
+                    });
+
+                data11 = [0, 9, 18, 27, 36, 45, 54, 63, 72, 81]
+                var legend2 = svg.selectAll(".legend2")
+                    .data(data11)
+                    .enter()
+                    .append('rect')
+                    .attr("class", "legend2")
+                    .attr('width', legendRectSizewidth)
+                    .attr('height', legendRectSize)
+                    .style('fill', colorScale)
+                    .style('stroke', colorScale)
+                    .attr('transform', function (d, i) {
+                        //console.log(colorScale.domain());
+                        var height = legendRectSize;
+                        var y = 600;
+                        var x = 200 + i * legendRectSizewidth;
+                        return 'translate(' + x + ',' + y + ')';
+                    });
+
+                legend.append('text')
+                    .attr('x', legendRectSize + legendSpacing)
+                    .attr('y', legendRectSize + 3 * legendSpacing)
+                    .text(function (d) { return d; });
+            }
+            drawlegend(axislabel);
+
+
+            svg.append("svg:text")
+                .text("No. of Crimes")
+                .attr("x", 300)
+                .attr("y", 610)
+                .attr("dy", "-1em")
+                .style("text-anchor", "middle");
+
+            svg.append("text")
+                .attr("transform", "translate(" + (width + 20) + " ," + (height + 25) + ")")
+                .style("text-anchor", "middle")
+                .text("Crime Type");
+
+
+            svg.append("text")
+                .attr("transform", "translate(" + (-30) + " ," + (0) + ")")
+                .style("text-anchor", "middle")
+                .text("Borough");
+
+
+            // Add the y-axis.
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(d3.axisLeft(y));
+
+
+
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .attr("y", 0)
+                .attr("x", -50)
+                .attr("dy", ".35em")
+                .attr("transform", "rotate(-90)")
+                .style("text-anchor", "start");;
+
+
+
+
+        });
+</script>
